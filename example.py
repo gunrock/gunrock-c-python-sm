@@ -29,16 +29,6 @@ col = pointer((c_int * len(col_list))(*col_list))
 qrow = pointer((c_int * len(qrow_list))(*qrow_list))
 qcol = pointer((c_int * len(qcol_list))(*qcol_list))
 
-# This is how you might create a NodeConditionT in C or C++:
-
-# NodeConditionT node_eql_to_davis(VertexId nodeId) {
-#   NodeConditionT res;
-#   res.node = nodeId;
-#   res.cond = StrConditionT_EQ;
-#   res.operand = "davis";
-#   return res;
-# }
-
 def NodeConditionT(node, cond, operand):
     # This is how NodeConditionT is represented as a struct in C
 

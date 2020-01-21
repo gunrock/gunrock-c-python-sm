@@ -116,7 +116,7 @@ std::function<bool(VertexId, VertexId)> nodeLambdaGenerator(
   };
 }
 
-# Integer comparison operators
+// Integer comparison operators
 std::function<bool(VertexId, VertexId, VertexId, VertexId)> edgeLambdaGenerator(
     vector<EdgeLabelT> base_edgeLabels,
     vector<EdgeConditionT> query_edgeConditions) {

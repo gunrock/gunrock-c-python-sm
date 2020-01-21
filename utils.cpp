@@ -3,6 +3,18 @@
 
 using namespace std;
 
+
+// This is how you might create a NodeConditionT in C or C++:
+
+// NodeConditionT node_eql_to_davis(VertexId nodeId) {
+//   NodeConditionT res;
+//   res.node = nodeId;
+//   res.cond = StrConditionT_EQ;
+//   res.operand = "davis";
+//   return res;
+// }
+
+
 string toString(EdgeConditionT cond) {
   stringstream ss;
   ss << "#EdgeCondition<" << cond.src << ", " << cond.dest << ", " << cond.cond << ", " << cond.operand << ">";
