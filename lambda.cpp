@@ -9,7 +9,7 @@
 using namespace std;
 
 /**
- * Find condition for a query node
+ * Lookup condition for a query node
  */
 
 NodeConditionT getQueryNodeConditionById(
@@ -27,7 +27,7 @@ NodeConditionT getQueryNodeConditionById(
 }
 
 /**
- * Find condition for a query edge
+ * Lookup condition for a query edge
  */
 
 EdgeConditionT getQueryEdgeConditionById(
@@ -46,7 +46,7 @@ EdgeConditionT getQueryEdgeConditionById(
 }
 
 /**
- * Retrieve metadata for a base node
+ * Lookup metadata for a base node
  */
 
 const char *getBaseNodeMetadataById(const char *const base_nodeLabels[],
@@ -59,7 +59,7 @@ const char *getBaseNodeMetadataById(const char *const base_nodeLabels[],
 }
 
 /**
- * Retrieve metadata for a base edge
+ * Lookup metadata for a base edge
  */
 
 EdgeLabelT getBaseEdgeMetadataById(vector<EdgeLabelT> base_edgeLabels,
@@ -82,11 +82,12 @@ EdgeLabelT getBaseEdgeMetadataById(vector<EdgeLabelT> base_edgeLabels,
 /**
  * Check to see if we can match a query node with a base node
  * To do this, we
- *   (1) retrieve the condition for the query node
- *   (2) retrieve the metadata for the base node
- *   (3) evalaute the condition on metadata
+ *   (1) lookup the condition for the query node
+ *   (2) lookup the metadata for the base node
+ *   (3) evalaute the condition by testing it on the metadata
  */
 
+// String comparison operators
 std::function<bool(VertexId, VertexId)> nodeLambdaGenerator(
     const char *const base_nodeLabels[],
     vector<NodeConditionT> query_nodeConditions) {
@@ -115,6 +116,7 @@ std::function<bool(VertexId, VertexId)> nodeLambdaGenerator(
   };
 }
 
+# Integer comparison operators
 std::function<bool(VertexId, VertexId, VertexId, VertexId)> edgeLambdaGenerator(
     vector<EdgeLabelT> base_edgeLabels,
     vector<EdgeConditionT> query_edgeConditions) {
@@ -139,14 +141,14 @@ std::function<bool(VertexId, VertexId, VertexId, VertexId)> edgeLambdaGenerator(
 }
 
 int main() {
-  // Suppose our graph has 2 labeled vertices
+  // Suppose our graph has 2 nodes (id 0, 1) with string labels
   const char *base_nodeLabels[] = {"davis", "berkeley"};
 
-  // In C-land, we pass query conditions (for nodes) as an array of structs
-  NodeConditionT query_node_conditions_1[] = {node_eql_to_davis(0),
-                                              node_neq_to_berkeley(1)};
+  // In C-land, we pass query conditions (for nodes) as an array of `NodeConditionT` structs
+  NodeConditionT query_node_conditions_1[] = {node_eql_to_davis(0), // label for id=0 match davis
+                                              node_neq_to_berkeley(1)}; // label for id=1 not match berkeley
 
-  // I convert the array of structs to a vector for convenience
+  // For convenience, I convert the array of structs to a vector 
   vector<NodeConditionT> query_node_conditions_vector(
       query_node_conditions_1, query_node_conditions_1 + 2);
 
@@ -154,13 +156,13 @@ int main() {
   auto node_lambda_1 =
       nodeLambdaGenerator(base_nodeLabels, query_node_conditions_vector);
 
+  // Tests for the generated match functions:
   assert(node_lambda_1(0, 0));
   assert(!node_lambda_1(1, 1));
 
   assert(!node_lambda_1(0, 1));
   assert(node_lambda_1(1, 0));
 
-  //
   EdgeLabelT base_edgeLabels[] = {edgeLabel(0, 1, 30), edgeLabel(3, 4, 45)};
   EdgeConditionT query_edgeConditions[] = {edge_gt_n(0, 1, 42)};
 
