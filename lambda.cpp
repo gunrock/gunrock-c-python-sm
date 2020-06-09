@@ -6,6 +6,25 @@
 #include "test.cpp"
 #include "utils.cpp"
 
+
+
+#include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/labeled_graph.hpp>
+#include <boost/graph/vf2_sub_graph_iso.hpp>
+#include <boost/property_map/property_map.hpp>
+#include <boost/graph/graphviz.hpp>
+#include <boost/graph/iteration_macros.hpp>
+#include <boost/graph/compressed_sparse_row_graph.hpp>
+
+using namespace boost;
+
+class WebPage
+{
+ public:
+  std::string url;
+};
+
+
 using namespace std;
 
 /**
@@ -140,7 +159,7 @@ std::function<bool(VertexId, VertexId, VertexId, VertexId)> edgeLambdaGenerator(
       };
 }
 
-int main() {
+int main2() {
   // Suppose our graph has 2 nodes (id 0, 1) with string labels
   const char *base_nodeLabels[] = {"davis", "berkeley"};
 
@@ -148,7 +167,7 @@ int main() {
   NodeConditionT query_node_conditions_1[] = {node_eql_to_davis(0), // label for id=0 match davis
                                               node_neq_to_berkeley(1)}; // label for id=1 not match berkeley
 
-  // For convenience, I convert the array of structs to a vector 
+  // For convenience, I convert the array of structs to a vector
   vector<NodeConditionT> query_node_conditions_vector(
       query_node_conditions_1, query_node_conditions_1 + 2);
 
@@ -179,20 +198,98 @@ int main() {
   assert(!edge_lambda_1(0, 1, 0, 1));
 }
 
+/*
+ * Compute B += A for CSR matrix A, C-contiguous dense matrix B
+ *
+ * Input Arguments:
+ *   I  n_row           - number of rows in A
+ *   I  n_col           - number of columns in A
+ *   I  Ap[n_row+1]     - row pointer
+ *   I  Aj[nnz(A)]      - column indices
+ *   T  Ax[nnz(A)]      - nonzero values
+ *   T  Bx[n_row*n_col] - dense matrix in row-major order
+ *
+ */
+template <class I, class T>
+void csr_todense(const I n_row,
+                 const I n_col,
+                 const I Ap[],
+                 const I Aj[],
+                 // const T Ax[],
+                       T Bx[])
+{
+    T * Bx_row = Bx;
+    for(I i = 0; i < n_row; i++){
+        for(I jj = Ap[i]; jj < Ap[i+1]; jj++){
+            // Bx_row[Aj[jj]] += Ax[jj];
+            Bx_row[Aj[jj]] = 1;
+        }
+        Bx_row += n_col;
+    }
+}
+
+
+// Default print_callback
+template <typename Graph1,
+          typename Graph2>
+struct vector_callback {
+
+  vector<int>& vec;
+
+  vector_callback(const Graph1& graph1, const Graph2& graph2, vector<int>& vec)
+    : graph1_(graph1), graph2_(graph2), vec(vec) {}
+
+  template <typename CorrespondenceMap1To2,
+            typename CorrespondenceMap2To1>
+  bool operator()(CorrespondenceMap1To2 f, CorrespondenceMap2To1) {
+
+    // Print (sub)graph isomorphism map
+    BGL_FORALL_VERTICES_T(v, graph1_, Graph1)
+      std::cout << '(' << get(vertex_index_t(), graph1_, v) << ", "
+                << get(vertex_index_t(), graph1_, get(f, v)) << ") ";
+
+    BGL_FORALL_VERTICES_T(v, graph1_, Graph1)
+      vec.push_back(get(vertex_index_t(), graph1_, get(f, v)));
+
+    std::cout << std::endl;
+
+    return true;
+  }
+private:
+  const Graph1& graph1_;
+  const Graph2& graph2_;
+};
+
+
 extern "C" {
-double sm_cpp(const int num_nodes, const int num_edges, const int *row_offsets,
-              const int *col_indices, const int num_query_nodes,
-              const int num_query_edges, const int *query_row_offsets,
-              const int *query_col_indices, const int num_runs,
 
-              const char *base_nodeLabels[],
-              const NodeConditionT *query_node_conditions,
+double __stdcall sm_cpp(
+ const int num_nodes,
+ const int num_edges,
+ const int *row_offsets,
+ const int *col_indices,
+ const int num_query_nodes,
+ const int num_query_edges,
+ const int *query_row_offsets,
+ const int *query_col_indices,
+ const int num_runs,
+ //
+ const char *base_nodeLabels[],
+ const NodeConditionT *query_node_conditions,
+ //
+ EdgeLabelT *base_edgeLabels,
+ //
+ EdgeConditionT *query_edgeConditions,
+ //
+ int *subgraphs,
+ int *list_subgraphs,
+ void (*python_callback)(int, int)
+ ) {
 
-              EdgeLabelT *base_edgeLabels,
-              
-              EdgeConditionT *query_edgeConditions,
+  python_callback(42, 43);
 
-              int *subgraphs) {
+  // cout << python_callback(42, 43) << endl;
+
   cout << sizeof(VertexId) << sizeof(StrConditionT) << sizeof(StrConditionT_EQ)
        << sizeof("h") << endl;
   cout << "num_nodes:" << num_nodes << endl;
@@ -216,6 +313,55 @@ double sm_cpp(const int num_nodes, const int num_edges, const int *row_offsets,
   }
   cout << "base_edgeLabels: " << toString(base_edgeLabels[0]) << endl;
   cout << "query_edgeConditions: " << toString(query_edgeConditions[0]) << endl;
+
+
+
+
+  typedef adjacency_list<setS, vecS, bidirectionalS> graph_type;
+
+  // Build graph1
+  graph_type boost_query_graph(num_query_nodes);
+  // add_edge(0, 6, graph1); add_edge(0, 7, graph1);
+  // add_edge(1, 5, graph1); add_edge(1, 7, graph1);
+  // add_edge(2, 4, graph1); add_edge(2, 5, graph1); add_edge(2, 6, graph1);
+  // add_edge(3, 4, graph1);
+
+  // // Build graph2
+  // int num_vertices2 = 9;
+  // graph_type graph2(num_vertices2);
+  // add_edge(0, 6, graph2); add_edge(0, 8, graph2);
+  // add_edge(1, 5, graph2); add_edge(1, 7, graph2);
+  // add_edge(2, 4, graph2); add_edge(2, 7, graph2); add_edge(2, 8, graph2);
+  // add_edge(3, 4, graph2); add_edge(3, 5, graph2); add_edge(3, 6, graph2);
+
+  int dense[num_query_nodes*num_query_nodes];
+  memset(dense, 0, num_query_nodes*num_query_nodes*sizeof(int));
+  csr_todense(num_query_nodes, num_query_nodes, query_row_offsets, query_col_indices, dense);
+
+  for(int i=0; i < num_query_nodes; i++) {
+    for(int j=0; j < num_query_nodes; j++) {
+      cout << dense[i*num_query_nodes+j] << " ";
+      if(dense[i*num_query_nodes+j] != 0) {
+        add_edge(i, j, boost_query_graph);
+      }
+    }
+    cout << endl;
+  }
+
+  graph_type boost_base_graph = boost_query_graph;
+
+  // Create callback to print mappings
+  // vf2_print_callback<graph_type, graph_type> callback(boost_query_graph, boost_base_graph);
+
+  auto vec = vector<int>();
+
+  vector_callback<graph_type, graph_type> callback(boost_query_graph, boost_base_graph, vec);
+
+  // Print out all subgraph isomorphism mappings between graph1 and graph2.
+  // Vertices and edges are assumed to be always equivalent.
+  vf2_subgraph_mono(boost_query_graph, boost_base_graph, callback);
+
+  cout<<callback.vec.size();
 
   return 42;
 }

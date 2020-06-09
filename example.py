@@ -99,6 +99,14 @@ c_query_edgeConditions = "".join(query_edgeConditions)
 
 # Call sm_cpp defined in
 # https://github.com/johari/gunrock-c-python-sm/blob/eaf3cebe50f41f4345182958cca63705793e8d07/lambda.cpp#L180-L220
+def my_callback(one, two):
+    print one
+    print two
 
-elapsed = lib.sm_cpp(nodes, edges, row, col, qnodes, qedges, qrow, qcol, 1, c_base_nodeLabels, 
-                    c_query_node_conditions, c_base_edgeLabels, c_query_edgeConditions, node)
+FUNC = CFUNCTYPE(None, c_int, c_int)
+python_callback = FUNC(my_callback)
+
+elapsed = lib.sm_cpp(nodes, edges, row, col, qnodes, qedges, qrow, qcol, 1, c_base_nodeLabels,
+                    c_query_node_conditions, c_base_edgeLabels, c_query_edgeConditions, node, python_callback)
+
+print "elapsed %f" % elapsed
