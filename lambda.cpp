@@ -244,14 +244,18 @@ struct vector_callback {
   bool operator()(CorrespondenceMap1To2 f, CorrespondenceMap2To1) {
 
     // Print (sub)graph isomorphism map
+    /*
     BGL_FORALL_VERTICES_T(v, graph1_, Graph1)
       std::cout << '(' << get(vertex_index_t(), graph1_, v) << ", "
                 << get(vertex_index_t(), graph1_, get(f, v)) << ") ";
+    */
 
-    BGL_FORALL_VERTICES_T(v, graph1_, Graph1)
+    BGL_FORALL_VERTICES_T(v, graph1_, Graph1) {
+      vec.push_back(get(vertex_index_t(), graph1_, v));
       vec.push_back(get(vertex_index_t(), graph1_, get(f, v)));
+    }
 
-    std::cout << std::endl;
+    // std::cout << std::endl;
 
     return true;
   }
@@ -263,7 +267,7 @@ private:
 
 extern "C" {
 
-double __stdcall sm_cpp(
+double sm_cpp(
  const int num_nodes,
  const int num_edges,
  const int *row_offsets,
@@ -281,15 +285,11 @@ double __stdcall sm_cpp(
  //
  EdgeConditionT *query_edgeConditions,
  //
- int *subgraphs,
- int *list_subgraphs,
- void (*python_callback)(int, int)
+ int *subgraphs_count,
+ int **subgraphs_mappings
  ) {
 
-  python_callback(42, 43);
-
-  // cout << python_callback(42, 43) << endl;
-
+  /*
   cout << sizeof(VertexId) << sizeof(StrConditionT) << sizeof(StrConditionT_EQ)
        << sizeof("h") << endl;
   cout << "num_nodes:" << num_nodes << endl;
@@ -313,8 +313,7 @@ double __stdcall sm_cpp(
   }
   cout << "base_edgeLabels: " << toString(base_edgeLabels[0]) << endl;
   cout << "query_edgeConditions: " << toString(query_edgeConditions[0]) << endl;
-
-
+  */
 
 
   typedef adjacency_list<setS, vecS, bidirectionalS> graph_type;
@@ -361,7 +360,14 @@ double __stdcall sm_cpp(
   // Vertices and edges are assumed to be always equivalent.
   vf2_subgraph_mono(boost_query_graph, boost_base_graph, callback);
 
-  cout<<callback.vec.size();
+  *subgraphs_count = callback.vec.size();
+
+  int *result = new int[callback.vec.size()];
+  for(int i=0; i<callback.vec.size(); i++) {
+    result[i] = callback.vec[i];
+  }
+
+  *subgraphs_mappings = result;
 
   return 42;
 }
