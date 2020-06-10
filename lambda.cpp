@@ -1,4 +1,5 @@
 #include <cstddef>
+#include <cstring>
 #include <vector>
 #include <algorithm>
 #include <iostream>
@@ -228,9 +229,14 @@ template <typename Graph1,
 struct vector_callback {
 
   vector<int>& vec;
+  const char **base_roles_;
+  const char **query_labels_;
 
-  vector_callback(const Graph1& graph1, const Graph2& graph2, vector<int>& vec)
-    : graph1_(graph1), graph2_(graph2), vec(vec) {}
+  vector_callback(const Graph1& graph1, const Graph2& graph2, vector<int>& vec, const char **base_roles, const char **query_labels)
+    : graph1_(graph1), graph2_(graph2), vec(vec) {
+      base_roles_ = base_roles;
+      query_labels_ = query_labels;
+    }
 
   template <typename CorrespondenceMap1To2,
             typename CorrespondenceMap2To1>
@@ -243,9 +249,31 @@ struct vector_callback {
                 << get(vertex_index_t(), graph1_, get(f, v)) << ") ";
     */
 
+    bool add = true;
+
     BGL_FORALL_VERTICES_T(v, graph1_, Graph1) {
-      vec.push_back(get(vertex_index_t(), graph1_, v));
-      vec.push_back(get(vertex_index_t(), graph2_, get(f, v)));
+      auto g1 = get(vertex_index_t(), graph1_, v);
+      auto g2 = get(vertex_index_t(), graph2_, get(f, v));
+
+      bool match = true;
+
+      if(query_labels_[g1][0] == '*') {
+        match = strcmp(query_labels_[g1]+1, base_roles_[g2]) == 0;
+      } else {
+        match = strcmp(query_labels_[g1], base_roles_[g2]) == 0;
+      }
+
+      add &= match;
+    }
+
+    if(add) {
+      BGL_FORALL_VERTICES_T(v, graph1_, Graph1) {
+        auto g1 = get(vertex_index_t(), graph1_, v);
+        auto g2 = get(vertex_index_t(), graph2_, get(f, v));
+
+        vec.push_back(g1);
+        vec.push_back(g2);
+      }
     }
 
     // std::cout << std::endl;
@@ -279,7 +307,9 @@ double sm_cpp(
  EdgeConditionT *query_edgeConditions,
  //
  int *subgraphs_count,
- int **subgraphs_mappings
+ int **subgraphs_mappings,
+ const char *base_roles[],
+ const char *query_labels[]
  ) {
 
   /*
@@ -363,7 +393,7 @@ double sm_cpp(
 
   auto vec = vector<int>();
 
-  vector_callback<graph_type, graph_type> callback(boost_query_graph, boost_base_graph, vec);
+  vector_callback<graph_type, graph_type> callback(boost_query_graph, boost_base_graph, vec, base_roles, query_labels);
 
   // Print out all subgraph isomorphism mappings between graph1 and graph2.
   // Vertices and edges are assumed to be always equivalent.
