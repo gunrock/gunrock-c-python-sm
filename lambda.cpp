@@ -18,13 +18,6 @@
 
 using namespace boost;
 
-class WebPage
-{
- public:
-  std::string url;
-};
-
-
 using namespace std;
 
 /**
@@ -252,7 +245,7 @@ struct vector_callback {
 
     BGL_FORALL_VERTICES_T(v, graph1_, Graph1) {
       vec.push_back(get(vertex_index_t(), graph1_, v));
-      vec.push_back(get(vertex_index_t(), graph1_, get(f, v)));
+      vec.push_back(get(vertex_index_t(), graph2_, get(f, v)));
     }
 
     // std::cout << std::endl;
@@ -347,7 +340,23 @@ double sm_cpp(
     cout << endl;
   }
 
-  graph_type boost_base_graph = boost_query_graph;
+
+  int dense_base[num_nodes*num_nodes];
+  memset(dense_base, 0, num_nodes*num_nodes*sizeof(int));
+  csr_todense(num_nodes, num_nodes, row_offsets, col_indices, dense_base);
+
+  graph_type boost_base_graph(num_nodes);
+
+  for(int i=0; i < num_nodes; i++) {
+    for(int j=0; j < num_nodes; j++) {
+      // cout << dense_base[i*num_nodes+j] << " ";
+      if(dense_base[i*num_nodes+j] != 0) {
+        add_edge(i, j, boost_base_graph);
+      }
+    }
+    // cout << endl;
+  }
+
 
   // Create callback to print mappings
   // vf2_print_callback<graph_type, graph_type> callback(boost_query_graph, boost_base_graph);
@@ -360,7 +369,7 @@ double sm_cpp(
   // Vertices and edges are assumed to be always equivalent.
   vf2_subgraph_mono(boost_query_graph, boost_base_graph, callback);
 
-  *subgraphs_count = callback.vec.size();
+  *subgraphs_count = callback.vec.size() / (num_query_nodes*2);
 
   int *result = new int[callback.vec.size()];
   for(int i=0; i<callback.vec.size(); i++) {

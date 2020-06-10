@@ -110,9 +110,15 @@ subgraphs_mappings = ctypes.POINTER(ctypes.c_int)()
 # elapsed = lib.sm_cpp(nodes, edges, row, col, qnodes, qedges, qrow, qcol, 1, c_base_nodeLabels,
 #                     c_query_node_conditions, c_base_edgeLabels, c_query_edgeConditions, node)
 
-elapsed = lib.sm_cpp(nodes, edges, row, col, qnodes, qedges, qrow, qcol, 1, c_base_nodeLabels,
-                    c_query_node_conditions, c_base_edgeLabels, c_query_edgeConditions,
-                    byref(subgraphs_count), byref(subgraphs_mappings))
+elapsed = lib.sm_cpp(
+    nodes, edges, row, col, qnodes, qedges, qrow, qcol, 1,
+    c_base_nodeLabels,
+    c_query_node_conditions,
+    c_base_edgeLabels,
+    c_query_edgeConditions,
+    byref(subgraphs_count),
+    byref(subgraphs_mappings)
+)
 
 for i in range(0, subgraphs_count.value, 2):
     print(subgraphs_mappings[i], subgraphs_mappings[i+1])
